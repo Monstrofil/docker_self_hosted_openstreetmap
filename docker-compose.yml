@@ -1,0 +1,68 @@
+version: "3.4"
+x-postgres-env-config: &x-postgres-env-config
+  POSTGRES_USER: "${POSTGRES_USER:-dev}"
+  POSTGRES_DB: "${POSTGRES_DB:-dev}"
+  POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-dev}"
+  POSTGRES_HOST: "${POSTGRES_HOST:-postgis}"
+
+services:
+
+  replicator:
+    build:
+      context: replicator
+    environment:
+      <<: *x-postgres-env-config
+    depends_on:
+      - postgis
+    volumes:
+      - replications:/var/replications/
+
+  nginx:
+    image: 'nginx:latest'
+    depends_on:
+      - website
+      - editor
+    ports:
+    - 8080:80
+    volumes:
+      - ./conf:/etc/nginx/conf.d:ro
+      - replications:/var/replications/
+
+  website:
+    environment:
+      <<: *x-postgres-env-config
+    build:
+      context: website
+      args:
+        TILESERVER_HOST: ${TILESERVER_HOST}
+    depends_on:
+      - postgis
+    volumes:
+      - /ssd/osm2/opt/:/osm/
+
+  editor:
+    environment:
+      <<: *x-postgres-env-config
+    build:
+      context: editor
+      target: nginx_id_editor
+      args:
+        OPENSTREETMAP_HOST: ${OPENSTREETMAP_HOST}
+    depends_on:
+      - postgis
+
+  postgis:
+    image: postgres:12.3
+    restart: unless-stopped
+    environment:
+      <<: *x-postgres-env-config
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data/
+
+networks:
+  backend:
+
+volumes:
+  pgdata:
+  replications:
