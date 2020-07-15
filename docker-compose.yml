@@ -17,6 +17,17 @@ services:
     volumes:
       - replications:/var/replications/
 
+  renderd_db_updater:
+    build:
+      context: renderd_db_updater
+    environment:
+      <<: *x-postgres-env-config
+      PGPASSWORD: "${POSTGRES_PASSWORD:-dev}"
+    depends_on:
+      - postgis_renderd
+      - nginx
+      - replicator
+
   nginx:
     image: 'nginx:latest'
     depends_on:
@@ -56,13 +67,23 @@ services:
     restart: unless-stopped
     environment:
       <<: *x-postgres-env-config
-      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGPASSWORD: "${POSTGRES_PASSWORD:-dev}"
     volumes:
       - pgdata:/var/lib/postgresql/data/
+
+  postgis_renderd:
+    image: mdillon/postgis
+    restart: unless-stopped
+    environment:
+      <<: *x-postgres-env-config
+      PGPASSWORD: "${POSTGRES_PASSWORD:-dev}"
+    volumes:
+      - pg_renderd_data:/var/lib/postgresql/data/
 
 networks:
   backend:
 
 volumes:
   pgdata:
+  pg_renderd_data:
   replications:
