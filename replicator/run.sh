@@ -10,10 +10,10 @@ database=${POSTGRES_DB}
 echo "Database access settings:"
 cat  /dbAuth.txt
 
-mkdir /var/replications/
+mkdir -p /var/replications/minute/
 while [[ true ]]; do
   echo "[$(date)] Replicating database..."
-  /usr/bin/osmosis -q --replicate-apidb authFile=/dbAuth.txt --write-replication workingDirectory=/var/replications/
+  /usr/bin/osmosis -q --replicate-apidb authFile=/dbAuth.txt --write-replication workingDirectory=/var/replications/minute/
   echo "[$(date)] ...done"
   sleep "${REPLICATE_PERIOD:-60}"
 done
