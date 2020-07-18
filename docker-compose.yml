@@ -71,6 +71,41 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data/
 
+  renderer:
+    build:
+      context: mapnik
+      target: renderd
+      args:
+        <<: *x-postgres-env-config
+    environment:
+      <<: *x-postgres-env-config
+      PGPASSWORD: "${POSTGRES_PASSWORD:-dev}"
+    entrypoint: renderd -f -c /usr/local/etc/renderd.conf
+    depends_on:
+      - renderd_db_updater
+    volumes:
+      - renderd:/var/run/renderd
+      - renderd:/var/lib/mod_tile
+
+  apache:
+    build:
+      context: mapnik
+      target: apache
+      args:
+        <<: *x-postgres-env-config
+    ports:
+      - 8082:80
+    environment:
+      <<: *x-postgres-env-config
+      PGPASSWORD: "${POSTGRES_PASSWORD:-dev}"
+    entrypoint: /usr/sbin/apache2ctl -DFOREGROUND
+    depends_on:
+      - renderd_db_updater
+      - renderer
+    volumes:
+      - renderd:/var/run/renderd
+      - renderd:/var/lib/mod_tile
+
   postgis_renderd:
     image: mdillon/postgis
     restart: unless-stopped
@@ -87,3 +122,4 @@ volumes:
   pgdata:
   pg_renderd_data:
   replications:
+  renderd:

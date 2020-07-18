@@ -19,9 +19,8 @@ wget https://raw.githubusercontent.com/gravitystorm/openstreetmap-carto/master/o
 osm2pgsql --create --slim --hstore --style openstreetmap-carto.style --tag-transform-script openstreetmap-carto.lua -d "${POSTGRES_DB}" -H postgis_renderd -U "${POSTGRES_USER}" -r pbf data.osm.pbf
 
 while true; do
+  sleep 10
 
   osmosis --read-replication-interval workingDirectory=. --simplify-change --write-xml-change - | \
     osm2pgsql --append -s -C 300 -G --hstore --style openstreetmap-carto.style --tag-transform-script openstreetmap-carto.lua --host=postgis_renderd -d "${POSTGRES_DB}" -U "${POSTGRES_USER}" -r xml -
-
-  sleep 10
 done

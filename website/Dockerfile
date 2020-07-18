@@ -55,7 +55,7 @@ ARG TILESERVER_HOST
 
 COPY config/OpenStreetMap.js vendor/assets/openlayers/OpenStreetMap.js
 #RUN sed -i 's/[TILESERVER_URL]/${TILESERVER_HOST}/g' vendor/assets/openlayers/OpenStreetMap.js
-RUN sed -i 's https://tile.openstreetmap.org https://tiles.openstreetmap.org.ua/tile g' vendor/assets/leaflet/leaflet.osm.js
+RUN sed -i 's https://tile.openstreetmap.org https://tiles.monstrofil.xyz/hot g' vendor/assets/leaflet/leaflet.osm.js
 
 COPY config/db.sql /migrations/db.sql
 

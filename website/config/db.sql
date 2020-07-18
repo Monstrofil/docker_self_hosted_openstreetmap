@@ -20,7 +20,10 @@ SET row_security = off;
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: dev
 --
 
-INSERT INTO public.users (email, id, pass_crypt, creation_time, display_name, data_public, description, home_lat, home_lon, home_zoom, pass_salt, email_valid, new_email, creation_ip, languages, status, terms_agreed, consider_pd, auth_uid, preferred_editor, terms_seen, description_format, changesets_count, traces_count, diary_entries_count, image_use_gravatar, auth_provider, home_tile, tou_agreed) VALUES ('admin@localhost.nowhere', 1, 'zUsK8b2plsPhGHAHsM/ahxf7MqaFwGI2DVYC+pcIa98=', '2020-07-14 19:11:46.049136', 'admin', true, '', NULL, NULL, 3, 'sha512!10000!mrYs5TmfO+nAOzGF/gb9MRMn23Hj6lXWVc+NZQ1yLTs=', true, NULL, '194.31.169.87', 'ru,en-US,en,uk,de', 'active', '2020-07-14 19:11:51.577137', false, NULL, NULL, true, 'markdown', 0, 0, 0, false, NULL, NULL, '2020-07-14 19:11:51.577158');
+INSERT INTO public.users
+  (email, id, pass_crypt, creation_time, display_name, data_public, description, home_lat, home_lon, home_zoom, pass_salt, email_valid, new_email, creation_ip, languages, status, terms_agreed, consider_pd, auth_uid, preferred_editor, terms_seen, description_format, changesets_count, traces_count, diary_entries_count, image_use_gravatar, auth_provider, home_tile, tou_agreed)
+VALUES
+  ('admin@localhost.nowhere', 1, 'zUsK8b2plsPhGHAHsM/ahxf7MqaFwGI2DVYC+pcIa98=', '2020-07-14 19:11:46.049136', 'admin', true, '', NULL, NULL, 3, 'sha512!10000!mrYs5TmfO+nAOzGF/gb9MRMn23Hj6lXWVc+NZQ1yLTs=', true, NULL, '194.31.169.87', 'ru,en-US,en,uk,de', 'active', '2020-07-14 19:11:51.577137', false, NULL, NULL, true, 'markdown', 0, 0, 0, false, NULL, NULL, '2020-07-14 19:11:51.577158');
 
 
 --
