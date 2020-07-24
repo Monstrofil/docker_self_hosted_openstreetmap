@@ -1,68 +1,75 @@
-FROM ubuntu:18.04 AS renderd
+FROM ubuntu:18.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN=true
 
-ARG POSTGRES_USER
-ARG POSTGRES_DB
-ARG POSTGRES_PASSWORD
-ARG POSTGRES_HOST
+# install node 12 repository
+RUN apt update && apt install -y curl
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
 
-# install Python and all the mapnik dependencies
-RUN apt-get update -y
-RUN apt-get install -y autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils python-mapnik python3-psycopg2
+# install Python, npm and all the mapnik dependencies
+RUN apt install -y autoconf apache2-dev libtool libxml2-dev libbz2-dev libgeos-dev \
+ libgeos++-dev libproj-dev gdal-bin libmapnik-dev mapnik-utils \
+ python-mapnik python3-psycopg2 git htop nodejs python3-pip libiniparser-dev
 
-RUN apt-get install -y git
+# install fonts
+# TODO: install from git
+RUN apt install -y fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted ttf-unifont
 
-RUN git clone -b switch2osm git://github.com/SomeoneElseOSM/mod_tile.git && \
-cd mod_tile && \
-./autogen.sh && ./configure && make -j 4
+# install node & python dependencies
+RUN npm install -g carto
+RUN pip3 install ruamel.yaml
 
-RUN cd mod_tile && make install && make install-mod_tile
+# clone and compile mod_tile module
+RUN git clone -b switch2osm git://github.com/SomeoneElseOSM/mod_tile.git \
+ && cd mod_tile \
+ && ./autogen.sh \
+ && ./configure \
+ && make -j 4 \
+ && make install \
+ && make install-mod_tile
 
-RUN apt-get install -y nodejs-dev node-gyp libssl1.0-dev npm nodejs software-properties-common
+RUN cd mod_tile
 
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CC86BB64
-RUN add-apt-repository ppa:rmescandon/yq
-RUN apt update
-RUN apt install yq -y
+FROM builder AS renderd
 
-RUN git clone -b v5.2.0 --depth=1 git://github.com/gravitystorm/openstreetmap-carto.git && \
-cd openstreetmap-carto && npm install -g carto && carto -v
+ARG CARTO_STYLE_TAG=v5.2.0
 
-RUN cd openstreetmap-carto && cat project.mml | head
-#RUN cd openstreetmap-carto && yq w -i project.mml _parts.osm2pgsql.dbname "${POSTGRES_DB}"
-#RUN cd openstreetmap-carto && yq w -I 4 -i project.mml _parts.osm2pgsql.host "${POSTGRES_HOST}"
-RUN apt-get install python3-pip -y
-#RUN cd openstreetmap-carto && python3 -m pip install pyYAML && python3 -c "import yaml; a = yaml.load(open('project.mml')); a._parts.osm2pgsql.dbname = '${POSTGRES_DB}'; a['_parts']['osm2pgsql.host = '${POSTGRES_HOST}'; yaml.dump(a, open('project.mml', 'w')) \
-#"
-RUN cd openstreetmap-carto && sed -i '/^    dbname:.*/a\ \ \ \ host: "postgis_renderd"' project.mml
-RUN cd openstreetmap-carto && sed -i '/^    dbname:.*/a\ \ \ \ user: "dev"' project.mml
-RUN cd openstreetmap-carto && sed -i "s/dbname: \"gis\"/dbname: \"${POSTGRES_DB}\"/g" project.mml
-RUN cd openstreetmap-carto && cat project.mml | grep osm2pgsql: -A 10
+ENV POSTGRES_HOST=postgres
+ENV POSTGRES_DB=default
+ENV POSTGRES_USER=default
+ENV POSTGRES_PASSWORD=default
 
-RUN cd openstreetmap-carto && carto project.mml > mapnik.xml
+ENV RENDERD_CONF_PATH=/usr/local/etc/renderd.conf
+
+# clone and build carto style
+RUN git clone -b ${CARTO_STYLE_TAG} --depth=1 git://github.com/gravitystorm/openstreetmap-carto.git
+
+COPY renderd/prepare_style.py .
+RUN cd openstreetmap-carto \
+  && python3 /prepare_style.py -f project.mml \
+  && carto project.mml > mapnik.xml
 
 COPY ne_110m_admin_0_boundary_lines_land.zip openstreetmap-carto/data/ne_110m_admin_0_boundary_lines_land.zip
 RUN cd openstreetmap-carto && ls data && python3 scripts/get-shapefiles.py --no-download -u
 
-RUN  apt-get install -y fonts-noto-cjk fonts-noto-hinted fonts-noto-unhinted ttf-unifont
-RUN cat /usr/local/etc/renderd.conf
 
-RUN sed -i "s /home/renderaccount/src/openstreetmap-carto/mapnik.xml /openstreetmap-carto/mapnik.xml g" /usr/local/etc/renderd.conf \
-  && sed -i 's localhost 0.0.0.0 g' /usr/local/etc/renderd.conf
+COPY renderd/run.sh /
+COPY renderd/renderd.conf ${RENDERD_CONF_PATH}
+ENTRYPOINT bash /run.sh
 
-RUN mkdir /var/run/renderd
-RUN mkdir /var/lib/mod_tile
 
-ENTRYPOINT renderd -f -c /usr/local/etc/renderd.conf
-
-FROM renderd AS apache
-
+FROM builder AS apache
 RUN apt-get install -y apache2
 
-RUN echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf
-RUN a2enconf mod_tile
+COPY httpd/modules.conf/mod_tile.conf /etc/apache2/conf-available/mod_tile.conf
+COPY httpd/mod_tile.conf /etc/mod_tile.conf
+COPY httpd/000-tile-server.conf /etc/apache2/sites-available/000-tile-server.conf
+COPY httpd/run.sh /run.sh
 
-RUN cat /usr/local/etc/renderd.conf
-COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
+RUN a2dissite 000-default \
+ && rm -f /etc/apache2/sites-available/000-default.conf \
+ && a2enconf mod_tile \
+ && a2ensite 000-tile-server
+
+ENTRYPOINT bash /run.sh

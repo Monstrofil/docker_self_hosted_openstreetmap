@@ -112,8 +112,8 @@ RUN sed -i 's/renderaccount/renderer/g' /usr/local/etc/renderd.conf \
  && sed -i 's/hot/tile/g' /usr/local/etc/renderd.conf
 
 # Configure Apache
-RUN mkdir /var/lib/mod_tile \
- && chown renderer /var/lib/mod_tile \
+RUN mkdir /var/run/renderd/mod_tile \
+ && chown renderer /var/run/renderd/mod_tile \
  && mkdir /var/run/renderd \
  && chown renderer /var/run/renderd \
  && echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf \
