@@ -72,11 +72,7 @@ services:
       - pgdata:/var/lib/postgresql/data/
 
   renderer:
-    build:
-      context: mapnik
-      target: renderd
-      args:
-        <<: *x-postgres-env-config
+    image: monstrofil/osm_renderd_carto_${CARTO_STYLE_TAG}
     environment:
       <<: *x-postgres-env-config
       PGPASSWORD: "${POSTGRES_PASSWORD:-dev}"
@@ -88,11 +84,7 @@ services:
       - renderd:/var/run/renderd
 
   apache:
-    build:
-      context: mapnik
-      target: apache
-      args:
-        <<: *x-postgres-env-config
+    image: monstrofil/osm_apache_mod_tile
     ports:
       - 8082:80
     environment:
